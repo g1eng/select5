@@ -24,12 +24,11 @@ jobs:
           go test -v .
       - name: Make coverage file
         run: |
-          	go test 
-		-v 
-		-coverprofile=coverage.txt 
-		-covermode=atomic 
-		-coverpkg . 
-		.
+          go test \
+          -v \
+          -coverprofile=coverage.txt \
+          -covermode=atomic \
+          -coverpkg . .
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
