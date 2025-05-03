@@ -1,5 +1,7 @@
 # SELECT-5
 
+[![codecov](https://codecov.io/gh/g1eng/select5/branch/main/graph/badge.svg)](https://codecov.io/gh/g1eng/select5)
+
  `select5` provides interactive terminal-based selection utilities for Go applications.
  It allows users to select items from lists and tables using keyboard navigation.
 
