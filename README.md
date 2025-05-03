@@ -1,7 +1,12 @@
 # SELECT-5
 
- Package select5 provides interactive terminal-based selection utilities for Go applications.
+ `select5` provides interactive terminal-based selection utilities for Go applications.
  It allows users to select items from lists and tables using keyboard navigation.
+
+The package aims to provide simple and slim interactive layer for CLI written in Go.
+
+For more rich experience (but fat package), use [bubble](https://github.com/charmbracelet/bubbletea) or other solutions.
+
 
  # Overview
 
