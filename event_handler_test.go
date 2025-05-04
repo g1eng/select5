@@ -2,35 +2,54 @@ package select5_test
 
 import (
 	"github.com/g1eng/select5"
+	"log"
 	"os"
 	"testing"
 	"time"
 )
 
-func TestCaptureKeyboardEventsA(t *testing.T) {
-	// Create a pipe
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
-	defer w.Close()
+func TestCaptureKeyboardEvents(t *testing.T) {
 
-	keyChannel := select5.CaptureKeyboardEvents(r)
+	targetChar := []rune{'a', 'b', 'C', '1', '#', '$', ' '}
 
-	key := 'a'
-	_, err = w.Write([]byte{byte(key)})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	select {
-	case k := <-keyChannel:
-		if k.Key != key {
-			t.Fatalf("invalid key code: %c, expected %c", k.Key, key)
+	for _, key := range targetChar {
+		// Create a pipe
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
 		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for key event")
+		defer r.Close()
+		defer w.Close()
+
+		oldStdin := os.Stdin
+		os.Stdin = r
+		defer func() { os.Stdin = oldStdin }() // Restore stdin when test completes
+
+		keyChannel := make(chan select5.KeyEvent)
+		sigChan := make(chan os.Signal)
+
+		go func() {
+			keyChannel, sigChan = select5.CaptureKeyboardEvents()
+		}()
+
+		time.Sleep(100 * time.Millisecond)
+
+		_, err = w.Write([]byte{byte(key)})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		select {
+		case k := <-keyChannel:
+			if k.Key != key {
+				t.Fatalf("invalid key code: %c, expected %c", k.Key, key)
+			}
+		case sig := <-sigChan:
+			t.Fatalf("os.Signal returned: %s", sig.String())
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout waiting for key event")
+		}
+
 	}
 
 }
@@ -44,7 +63,16 @@ func TestCaptureKeyboardEventsEnter(t *testing.T) {
 	defer r.Close()
 	defer w.Close()
 
-	keyChannel := select5.CaptureKeyboardEvents(r)
+	oldStdin := os.Stdin
+	os.Stdin = r
+	defer func() { os.Stdin = oldStdin }()
+
+	keyChannel := make(chan select5.KeyEvent)
+	sigChan := make(chan os.Signal)
+	go func() {
+		keyChannel, sigChan = select5.CaptureKeyboardEvents()
+	}()
+	time.Sleep(100 * time.Millisecond)
 
 	key := '\n'
 	_, err = w.Write([]byte{byte(key)})
@@ -54,257 +82,118 @@ func TestCaptureKeyboardEventsEnter(t *testing.T) {
 
 	select {
 	case k := <-keyChannel:
-		if k.Special != "ENTER" {
+		if k.Special != select5.ENTER {
 			t.Fatalf("invalid key code: %c, expected DEL", k.Key)
 		}
+	case sig := <-sigChan:
+		t.Fatalf("os.Signal returned: %s", sig.String())
 	case <-time.After(2 * time.Second):
 		t.Fatal("timeout waiting for key event")
 	}
 }
 
-func TestCaptureKeyboardEventsUpArrow(t *testing.T) {
-	// Create a pipe
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
+func TestCaptureKeyboardEventsSpecialChar(t *testing.T) {
+
+	testTarget := map[int][]byte{
+		select5.ENTER:    {'\n'},
+		select5.BS:       {'\b'},
+		select5.DEL:      {0x7f},
+		select5.UP:       {0x1b, '[', 'A'},
+		select5.DOWN:     {0x1b, '[', 'B'},
+		select5.RIGHT:    {0x1b, '[', 'C'},
+		select5.LEFT:     {0x1b, '[', 'D'},
+		select5.HOME:     {0x1b, '[', 'H'},
+		select5.END:      {0x1b, '[', 'F'},
+		select5.PAGEUP:   {0x1b, '[', '5', '~'},
+		select5.PAGEDOWN: {0x1b, '[', '6', '~'},
 	}
-	defer r.Close()
-	defer w.Close()
-
-	keyChannel := select5.CaptureKeyboardEvents(r)
-
-	// Send the UP arrow key escape sequence: ESC [ A
-	_, err = w.Write([]byte{0x1b, '[', 'A'})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	select {
-	case k := <-keyChannel:
-		if k.Special != "UP" {
-			t.Fatalf("invalid special key: %v, expected UP", k.Special)
+	for keyCode, v := range testTarget {
+		// Create a pipe
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
 		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for key event")
+		defer r.Close()
+		defer w.Close()
+
+		oldStdin := os.Stdin
+		os.Stdin = r
+		defer func() { os.Stdin = oldStdin }()
+
+		keyChannel := make(chan select5.KeyEvent)
+		sigChan := make(chan os.Signal)
+		go func() {
+			keyChannel, sigChan = select5.CaptureKeyboardEvents()
+		}()
+
+		time.Sleep(100 * time.Millisecond)
+
+		// Send the UP arrow key escape sequence: ESC [ A
+		_, err = w.Write(v)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		select {
+		case k := <-keyChannel:
+			if k.Special != keyCode {
+				t.Fatalf("invalid special key: %x, expected %x", k.Special, keyCode)
+			}
+		case sig := <-sigChan:
+			t.Fatalf("os.Signal returned: %s", sig.String())
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout waiting for key event")
+		}
 	}
 }
 
-func TestCaptureKeyboardEventsDownArrow(t *testing.T) {
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
-	defer w.Close()
-
-	keyChannel := select5.CaptureKeyboardEvents(r)
-
-	_, err = w.Write([]byte{0x1b, '[', 'B'})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	select {
-	case k := <-keyChannel:
-		if k.Special != "DOWN" {
-			t.Fatalf("invalid special key: %v, expected DOWN", k.Special)
+func TestCaptureKeyboardEventsNonInterruptCtrl(t *testing.T) {
+	testTarget := []byte{select5.CtrlA, select5.CtrlB, select5.CtrlD, select5.CtrlE, select5.CtrlN, select5.CtrlP, select5.CtrlX, select5.CtrlY}
+	for i, key := range testTarget {
+		// Create a pipe
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatal(err)
 		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for key event")
-	}
-}
+		defer r.Close()
+		defer w.Close()
 
-func TestCaptureKeyboardEventsLeftArrow(t *testing.T) {
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
-	defer w.Close()
+		oldStdin := os.Stdin
+		os.Stdin = r
+		defer func() { os.Stdin = oldStdin }()
+		keyChannel := make(chan select5.KeyEvent)
+		sigChan := make(chan os.Signal)
 
-	keyChannel := select5.CaptureKeyboardEvents(r)
+		go func() {
+			keyChannel, sigChan = select5.CaptureKeyboardEvents()
+		}()
 
-	_, err = w.Write([]byte{0x1b, '[', 'D'})
-	if err != nil {
-		t.Fatal(err)
-	}
+		time.Sleep(100 * time.Millisecond)
 
-	select {
-	case k := <-keyChannel:
-		if k.Special != "LEFT" {
-			t.Fatalf("invalid special key: %v, expected LEFT", k.Special)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for key event")
-	}
-}
-
-func TestCaptureKeyboardEventsRightArrow(t *testing.T) {
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
-	defer w.Close()
-
-	keyChannel := select5.CaptureKeyboardEvents(r)
-
-	_, err = w.Write([]byte{0x1b, '[', 'C'})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	select {
-	case k := <-keyChannel:
-		if k.Special != "RIGHT" {
-			t.Fatalf("invalid special key: %v, expected RIGHT", k.Special)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for key event")
-	}
-}
-
-func TestCaptureKeyboardEventsPageUp(t *testing.T) {
-	// Create a pipe
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
-	defer w.Close()
-
-	keyChannel := select5.CaptureKeyboardEvents(r)
-
-	// Send the PageUp key escape sequence: ESC [ 5 ~
-	_, err = w.Write([]byte{0x1b, '[', '5', '~'})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	select {
-	case k := <-keyChannel:
-		if k.Special != "PAGEUP" {
-			t.Fatalf("invalid special key: %v, expected PAGEUP", k.Special)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for key event")
-	}
-}
-
-func TestCaptureKeyboardEventsPageDown(t *testing.T) {
-	// Create a pipe
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
-	defer w.Close()
-
-	keyChannel := select5.CaptureKeyboardEvents(r)
-
-	// Send the PageDown key escape sequence: ESC [ 6 ~
-	_, err = w.Write([]byte{0x1b, '[', '6', '~'})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	select {
-	case k := <-keyChannel:
-		if k.Special != "PAGEDOWN" {
-			t.Fatalf("invalid special key: %v, expected PAGEDOWN", k.Special)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for key event")
-	}
-}
-
-func TestCaptureKeyboardEventsHome(t *testing.T) {
-	// Create a pipe
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
-	defer w.Close()
-
-	keyChannel := select5.CaptureKeyboardEvents(r)
-
-	// Send the Home key escape sequence: ESC [ H
-	_, err = w.Write([]byte{0x1b, '[', 'H'})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	select {
-	case k := <-keyChannel:
-		if k.Special != "HOME" {
-			t.Fatalf("invalid special key: %v, expected HOME", k.Special)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for key event")
-	}
-}
-
-func TestCaptureKeyboardEventsEnd(t *testing.T) {
-	// Create a pipe
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
-	defer w.Close()
-
-	keyChannel := select5.CaptureKeyboardEvents(r)
-
-	// Send the End key escape sequence: ESC [ F
-	_, err = w.Write([]byte{0x1b, '[', 'F'})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	select {
-	case k := <-keyChannel:
-		if k.Special != "END" {
-			t.Fatalf("invalid special key: %v, expected END", k.Special)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for key event")
-	}
-}
-
-func TestCaptureKeyboardEventsCtrlD(t *testing.T) {
-	// Create a pipe
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer r.Close()
-	defer w.Close()
-
-	keyChannel := select5.CaptureKeyboardEvents(r)
-
-	// Send Ctrl+D (ASCII 4)
-	_, err = w.Write([]byte{4})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	select {
-	case k := <-keyChannel:
-		// Check that it's the correct character code for Ctrl+D
-		if k.Key != 4 {
-			t.Fatalf("invalid key code: %d, expected 4", k.Key)
+		// Send Ctrl+?
+		_, err = w.Write([]byte{key})
+		if err != nil {
+			t.Fatal(err)
 		}
 
-		// Verify Ctrl modifier is set
-		if !k.Ctrl {
-			t.Fatalf("Ctrl modifier not set for Ctrl+D")
+		log.Println(i)
+		select {
+		case k := <-keyChannel:
+			// Check that its the correct character code for Ctrl+?
+			if k.Key != rune(key) {
+				t.Fatalf("invalid key code: %d, expected %d", k.Key, rune(key))
+			}
+			// Verify Ctrl modifier is set
+			if k.Ctrl != true {
+				t.Fatalf("Ctrl modifier not set for Ctrl+%c", rune(key+0x60))
+			}
+			if k.Special != 0 {
+				t.Fatalf("unexpected special key set: %v", k.Special)
+			}
+		case sig := <-sigChan:
+			t.Fatalf("os.Signal returned: %s", sig.String())
+		case <-time.After(2 * time.Second):
+			t.Fatal("timeout waiting for key event")
 		}
-
-		if k.Special != "" {
-			t.Fatalf("unexpected special key set: %v", k.Special)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("timeout waiting for key event")
 	}
 }
