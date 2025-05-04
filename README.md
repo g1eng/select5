@@ -57,8 +57,8 @@ For more rich experience (but fat package), use [bubble](https://github.com/char
  	// Extract string value
  	code, err := select5.GetS(selectedRow[0])
 
- 	// Extract float value
- 	price, err := select5.GetF(selectedRow[2])
+ 	// Extract float32 value
+ 	price, err := select5.GetF32(selectedRow[2])
 
  	// Extract bool value
  	active, err := select5.GetB(selectedRow[3])
