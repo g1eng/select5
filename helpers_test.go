@@ -8,15 +8,26 @@ import (
 )
 
 var (
-	pointedString         = "POINT"
-	pInt                  = 366
-	pInt8         int8    = 36
-	pInt16        int16   = 366
-	pInt32        int32   = 366
-	pInt64        int64   = 366
-	pF32          float32 = 366.0
-	pF64          float64 = 365.0051
-	pB                    = true
+	pointedString          = "POINT"
+	pInt          int      = 366
+	pInt8         int8     = 36
+	pInt16        int16    = 366
+	pInt32        int32    = 366
+	pInt64        int64    = 366
+	pF32          float32  = 366.0
+	pF64          float64  = 365.0051
+	pB                     = true
+	pNilInt       *int     = nil
+	pNilInt8      *int8    = nil
+	pNilInt16     *int16   = nil
+	pNilInt32     *int32   = nil
+	pNilInt64     *int64   = nil
+	pNilF32       *float32 = nil
+	pNilF64       *float64 = nil
+
+	//
+	pNilString *string = nil
+	pNilB      *bool   = nil
 )
 
 func TestGetS(t *testing.T) {
@@ -392,11 +403,22 @@ func TestGetVP(t *testing.T) {
 		{"*float64", args{&pF64}, fmt.Sprintf("%f", pF64)},
 		{"*bool", args{&pB}, "✓"},
 		{"any", args{struct{}{}}, ""},
+		{"*(nil)int", args{pNilInt}, ""},
+		{"*(nil)int8", args{pNilInt8}, ""},
+		{"*(nil)int16", args{pNilInt16}, ""},
+		{"*(nil)int32", args{pNilInt32}, ""},
+		{"*(nil)int64", args{pNilInt64}, ""},
+		{"*(nil)float32", args{pNilF32}, ""},
+		{"*(nil)float64", args{pNilF64}, ""},
+		{"*(nil)bool", args{pNilB}, ""},        //printable
+		{"*(nil)string", args{pNilString}, ""}, //printable
 	}
 	for _, tt := range typesTT {
 		t.Run(tt.name, func(t *testing.T) {
 			if gotRes, err := select5.GetVP(tt.args.s); err != nil {
 				if strings.TrimLeft(tt.name, "*") == tt.name && tt.name != "any" {
+					t.Errorf("GetVP() failed for %s, got %s: %v", tt.name, gotRes, err)
+				} else if tt.name == "*(nil)bool" || tt.name == "*(nil)string" {
 					t.Errorf("GetVP() failed for %s, got %s: %v", tt.name, gotRes, err)
 				}
 			} else if gotRes != tt.wantRes {
