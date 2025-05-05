@@ -12,7 +12,7 @@ package select5
 // Both modes support keyboard navigation with arrow keys and selection with Enter.
 // The library handles terminal control sequences and cursor movement automatically.
 //
-// # Basic String Selection
+// # Basic Utf8Char Selection
 //
 // Use SelectString to display a simple list of strings for selection:
 //
