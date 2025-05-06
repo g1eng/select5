@@ -160,7 +160,7 @@ func CaptureKeyboardEvents() (chan KeyEvent, chan os.Signal) {
 					continue
 				} else if buffer[0]&0x80 != 0x80 {
 					//ascii character handling
-					receiveASCII(buffer[0], keyChannel, sigChan)
+					sendASCII(buffer[0], keyChannel, sigChan)
 					buffer = buffer[:0] //clear
 					continue
 				}
@@ -209,7 +209,7 @@ func CaptureKeyboardEvents() (chan KeyEvent, chan os.Signal) {
 				// emit what we have as individual bytes (likely garbage)
 				if len(buffer) > 6 {
 					for _, b := range buffer {
-						receiveASCII(b, keyChannel, sigChan)
+						sendASCII(b, keyChannel, sigChan)
 					}
 					buffer = buffer[:0] // Clear buffer
 				}
@@ -220,8 +220,8 @@ func CaptureKeyboardEvents() (chan KeyEvent, chan os.Signal) {
 	return keyChannel, sigChan
 }
 
-// receive ASCII and control characters
-func receiveASCII(b byte, keyChannel chan KeyEvent, sigChan chan os.Signal) {
+// send ASCII and control characters
+func sendASCII(b byte, keyChannel chan KeyEvent, sigChan chan os.Signal) {
 	key := KeyEvent{
 		Key:   rune(b),
 		Code:  int(b),
