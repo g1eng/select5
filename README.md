@@ -2,8 +2,6 @@
 
 [![codecov](https://codecov.io/gh/g1eng/select5/branch/main/graph/badge.svg)](https://codecov.io/gh/g1eng/select5)
 
-package select5
-
 Package select5 provides interactive terminal-based selection utilities for Go applications.
 It allows you to select items from lists and tables using keyboard navigation.
 
@@ -24,7 +22,7 @@ The library handles terminal control sequences and cursor movement automatically
 The package also implements an experimental console text editor with Emacs-like key binding.
 For more detail, see the [example](#text-editor-alpha).
 
-# Basic Utf8Char Selection
+# Basic String Selection
 
 Use SelectString to display a simple list of strings for selection:
 
@@ -126,8 +124,9 @@ IsList    byte = 0x00
 IsTable   byte = 0x80
 ```
 
-For example, a float64 list will return `0x60` and a table of string and int values will return `0xff`.
-You can implement type switcher for various data structure, using this mechanism.
+For example, a float64 list will return `0x10` and a table of string and int values will return `0xff`.
+(If one or more types have been detected in the data, the result will be a logical sum by IsAny 0x7f).
+You can implement type switcher for various data structures, using this mechanism.
 
 # Terminal Control
 
