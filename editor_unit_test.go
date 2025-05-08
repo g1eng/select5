@@ -1,4 +1,4 @@
-package main
+package select5_test
 
 import (
 	"github.com/g1eng/select5"
@@ -35,76 +35,71 @@ func TestEditor_PutEnter_NoDataCorruption(t *testing.T) {
 	sc := strings.Join(sl1, "")
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   string
 	}{
 		{
 			"base",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 12,
 					Y: 3,
 				},
 				nil,
 				r1,
 				sl,
-				select5.KeyEvent{},
 			},
 			sc,
 		},
 		{
 			"document head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 0,
 				},
 				nil,
 				r2,
 				sl2,
-				select5.KeyEvent{},
 			},
 			sc,
 		},
 		{
 			"document end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[len(sl)-1]) - 1,
 					Y: len(sl) - 1,
 				},
 				nil,
 				r3,
 				sl3,
-				select5.KeyEvent{},
 			},
 			sc,
 		},
 		{
 			"line end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[3]) - 1,
 					Y: 3,
 				},
 				nil,
 				r4,
 				sl4,
-				select5.KeyEvent{},
 			},
 			sc,
 		},
 		{
 			"line head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 3,
 				},
 				nil,
 				r5,
 				sl5,
-				select5.KeyEvent{},
 			},
 			sc,
 		},
@@ -114,7 +109,7 @@ func TestEditor_PutEnter_NoDataCorruption(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.editor.PutEnter()
 			if got := strings.Join(tt.editor.Line, ""); got != tt.want {
-				t.Errorf("Editor.Line() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.Line() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -140,20 +135,19 @@ func TestEditor_PutEnter_ValidSplitting(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   string
 	}{
 		{
 			"middle",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 5,
 					Y: 3,
 				},
 				nil,
 				r1,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -165,15 +159,14 @@ Akubishinagara`,
 		},
 		{
 			"base",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 6,
 					Y: 0,
 				},
 				nil,
 				r2,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruni
 nari
@@ -185,43 +178,40 @@ Akubishinagara`,
 		},
 		{
 			"document head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 0,
 				},
 				nil,
 				r3,
 				sl,
-				select5.KeyEvent{},
 			},
 			"\n" + strings.Join(sl, "\n"),
 		},
 		{
 			"document end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[len(sl)-1]),
 					Y: len(sl) - 1,
 				},
 				nil,
 				r4,
 				sl,
-				select5.KeyEvent{},
 			},
 			strings.Join(sl, "\n") + "\n",
 		},
 		{
 			"line head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 3,
 				},
 				nil,
 				r5,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -233,15 +223,14 @@ Akubishinagara`,
 		},
 		{
 			"line end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[3]),
 					Y: 3,
 				},
 				nil,
 				r2,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -257,7 +246,7 @@ Akubishinagara`,
 		t.Run(tt.name, func(t *testing.T) {
 			tt.editor.PutEnter()
 			if got := strings.Join(tt.editor.Line, "\n"); got != tt.want {
-				t.Errorf("Editor.Line() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.Line() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -290,13 +279,13 @@ func TestEditor_PutCharA(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   string
 	}{
 		{
 			"middle",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 5,
 					Y: 3,
 				},
@@ -304,7 +293,6 @@ func TestEditor_PutCharA(t *testing.T) {
 				nil,
 				r5,
 				sl1,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -316,15 +304,14 @@ Akubishinagara`,
 
 		{
 			"document head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 0,
 				},
 				nil,
 				r4,
 				sl3,
-				select5.KeyEvent{},
 			},
 			`AHaruninari
 Nosonoso
@@ -335,29 +322,27 @@ Akubishinagara`,
 		},
 		{
 			"document end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[len(sl)-1]),
 					Y: len(sl) - 1,
 				},
 				nil,
 				r3,
 				sl4,
-				select5.KeyEvent{},
 			},
 			strings.Join(sl, "\n") + "A",
 		},
 		{
 			"line head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 3,
 				},
 				nil,
 				r2,
 				sl5,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -368,15 +353,14 @@ Akubishinagara`,
 		},
 		{
 			"line end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[3]),
 					Y: 3,
 				},
 				nil,
 				r1,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -391,7 +375,7 @@ Akubishinagara`,
 		t.Run(tt.name, func(t *testing.T) {
 			tt.editor.PutS([]byte{'A'})
 			if got := strings.Join(tt.editor.Line, "\n"); got != tt.want {
-				t.Errorf("Editor.Line() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.Line() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -424,20 +408,19 @@ func TestEditor_PutDelete(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   string
 	}{
 		{
 			"middle",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 5,
 					Y: 3,
 				},
 				nil,
 				r1,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -448,15 +431,14 @@ Akubishinagara`,
 		},
 		{
 			"base",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 6,
 					Y: 0,
 				},
 				nil,
 				r5,
 				sl1,
-				select5.KeyEvent{},
 			},
 			`Haruniari
 Nosonoso
@@ -467,15 +449,14 @@ Akubishinagara`,
 		},
 		{
 			"document head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 0,
 				},
 				nil,
 				r4,
 				sl2,
-				select5.KeyEvent{},
 			},
 			`aruninari
 Nosonoso
@@ -486,29 +467,27 @@ Akubishinagara`,
 		},
 		{
 			"document end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl3[len(sl3)-1]),
 					Y: len(sl3) - 1,
 				},
 				nil,
 				r3,
 				sl3,
-				select5.KeyEvent{},
 			},
 			strings.Join(sl3, "\n"),
 		},
 		{
 			"line head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 3,
 				},
 				nil,
 				r2,
 				sl4,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -519,15 +498,14 @@ Akubishinagara`,
 		},
 		{
 			"line end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl5[3]),
 					Y: 3,
 				},
 				nil,
 				r1,
 				sl5,
-				select5.KeyEvent{},
 			},
 			strings.Join(sl5, "\n"),
 		},
@@ -537,7 +515,7 @@ Akubishinagara`,
 		t.Run(tt.name, func(t *testing.T) {
 			tt.editor.PutDelete()
 			if got := strings.Join(tt.editor.Line, "\n"); got != tt.want {
-				t.Errorf("Editor.Line() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.Line() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -571,20 +549,19 @@ func TestEditor_PutBackspace(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   string
 	}{
 		{
 			"middle",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 5,
 					Y: 3,
 				},
 				nil,
 				r1,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -595,15 +572,14 @@ Akubishinagara`,
 		},
 		{
 			"document head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 0,
 				},
 				nil,
 				r2,
 				sl2,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -614,15 +590,14 @@ Akubishinagara`,
 		},
 		{
 			"document end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl3[len(sl3)-1]),
 					Y: len(sl3) - 1,
 				},
 				nil,
 				r3,
 				sl3,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -633,15 +608,14 @@ Akubishinagar`,
 		},
 		{
 			"line head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 3,
 				},
 				nil,
 				r4,
 				sl4,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -651,15 +625,14 @@ Akubishinagara`,
 		},
 		{
 			"line end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl5[3]),
 					Y: 3,
 				},
 				nil,
 				r5,
 				sl5,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -674,7 +647,7 @@ Akubishinagara`,
 		t.Run(tt.name, func(t *testing.T) {
 			tt.editor.PutBackspace()
 			if got := strings.Join(tt.editor.Line, "\n"); got != tt.want {
-				t.Errorf("Editor.Line() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.Line() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -695,21 +668,20 @@ func TestEditor_Utf8Input(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		key    select5.KeyEvent
 		want   string
 	}{
 		{
 			"core",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 12,
 					Y: 2,
 				},
 				nil,
 				os.Stderr,
 				sl1,
-				select5.KeyEvent{},
 			},
 			select5.KeyEvent{
 				Key:         'a',
@@ -730,15 +702,14 @@ func TestEditor_Utf8Input(t *testing.T) {
 		},
 		{
 			"neko",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 12,
 					Y: 2,
 				},
 				nil,
 				os.Stderr,
 				sl2,
-				select5.KeyEvent{},
 			},
 			select5.KeyEvent{
 				Key:         0xe7,
@@ -763,12 +734,12 @@ func TestEditor_Utf8Input(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			k, err := tt.key.Utf8Char()
 			if err != nil {
-				t.Errorf("Editor.Utf8Char() error = %v", err)
+				t.Errorf("select5.Editor.Utf8Char() error = %v", err)
 			}
 			tt.editor.PutS(k)
 			if got := strings.Join(tt.editor.Line, "\n"); got != tt.want {
-				t.Errorf("Editor.Line2,12() = %x%x%x, want %x%x%x", tt.editor.Line[2][12], tt.editor.Line[2][13], tt.editor.Line[2][14], k[0], k[1], k[2])
-				t.Errorf("Editor.Line() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.Line2,12() = %x%x%x, want %x%x%x", tt.editor.Line[2][12], tt.editor.Line[2][13], tt.editor.Line[2][14], k[0], k[1], k[2])
+				t.Errorf("select5.Editor.Line() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -776,56 +747,78 @@ func TestEditor_Utf8Input(t *testing.T) {
 
 func TestEditor_LineVisibleLength(t *testing.T) {
 	sl := []string{
+		"熊",
+		"",
 		"春になり",
 		"のそのそ熊さん",
 		"起きました.",
 		"「ああよく寝た」と",
 		"あくびしながら",
 	}
-	sl1, sl2 :=
-		make([]string, len(sl)), make([]string, len(sl))
-	copy(sl1, sl)
-	copy(sl2, sl)
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   int
 	}{
 		{
 			"core",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 10,
-					Y: 2,
+					Y: 4,
 				},
 				nil,
 				nil,
-				sl1,
-				select5.KeyEvent{},
+				sl,
 			},
-			11,
+			2*5 + 1,
 		},
 		{
 			"core",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 3,
-					Y: 3,
+					Y: 5,
 				},
 				nil,
 				nil,
-				sl1,
-				select5.KeyEvent{},
+				sl,
 			},
 			18,
+		},
+		{
+			"one mb character",
+			select5.Editor{
+				select5.CursorPosition{
+					X: 0,
+					Y: 0,
+				},
+				nil,
+				nil,
+				sl,
+			},
+			2,
+		},
+		{
+			"blank line",
+			select5.Editor{
+				select5.CursorPosition{
+					X: 0,
+					Y: 1,
+				},
+				nil,
+				nil,
+				sl,
+			},
+			0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := tt.editor.GetLineVisibleLength(); got != tt.want {
-				t.Errorf("Editor.GetLineVisibleLength() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.GetLineVisibleLength() = %v, want %v", got, tt.want)
 			}
 		})
 	}

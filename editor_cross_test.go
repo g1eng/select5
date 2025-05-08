@@ -1,4 +1,4 @@
-package main
+package select5_test
 
 import (
 	"fmt"
@@ -20,20 +20,19 @@ func TestEditor_PutEnter_After_Down(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   string
 	}{
 		{
 			"middle",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 5,
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -45,15 +44,14 @@ Akubishinagara`,
 		},
 		{
 			"base",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 6,
 					Y: 0,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosono
@@ -65,15 +63,14 @@ Akubishinagara`,
 		},
 		{
 			"document head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 0,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 
@@ -85,29 +82,27 @@ Akubishinagara`,
 		},
 		{
 			"document end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[len(sl)-1]),
 					Y: len(sl) - 1,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			strings.Join(sl, "\n") + "\n",
 		},
 		{
 			"line head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -119,15 +114,14 @@ Akubishinagara`,
 		},
 		{
 			"line end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[3]),
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -144,7 +138,7 @@ Akubishinagara`,
 			tt.editor.Down()
 			tt.editor.PutEnter()
 			if got := strings.Join(tt.editor.Line, "\n"); got != tt.want {
-				t.Errorf("Editor.Line() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.Line() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -162,20 +156,19 @@ func TestEditor_PutEnter_After_Up(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   string
 	}{
 		{
 			"middle",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 5,
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -187,15 +180,14 @@ Akubishinagara`,
 		},
 		{
 			"base",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 6,
 					Y: 0,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruni
 nari
@@ -207,15 +199,14 @@ Akubishinagara`,
 		},
 		{
 			"document head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 0,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`
 Haruninari
@@ -227,15 +218,14 @@ Akubishinagara`,
 		},
 		{
 			"document end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[len(sl)-1]),
 					Y: len(sl) - 1,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -247,15 +237,14 @@ Akubishinagara`,
 		},
 		{
 			"line head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -267,15 +256,14 @@ Akubishinagara`,
 		},
 		{
 			"line end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[3]),
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -292,7 +280,7 @@ Akubishinagara`,
 			tt.editor.Up()
 			tt.editor.PutEnter()
 			if got := strings.Join(tt.editor.Line, "\n"); got != tt.want {
-				t.Errorf("Editor.Line() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.Line() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -310,20 +298,19 @@ func TestEditor_PutEnter_After_Up_InputO(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   string
 	}{
 		{
 			"middle",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 5,
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -335,15 +322,14 @@ Akubishinagara`,
 		},
 		{
 			"base",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 6,
 					Y: 0,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruni
 Onari
@@ -355,15 +341,14 @@ Akubishinagara`,
 		},
 		{
 			"document head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 0,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`
 OHaruninari
@@ -375,15 +360,14 @@ Akubishinagara`,
 		},
 		{
 			"document end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[len(sl)-1]),
 					Y: len(sl) - 1,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -395,15 +379,14 @@ Akubishinagara`,
 		},
 		{
 			"line head",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 0,
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -415,15 +398,14 @@ Akubishinagara`,
 		},
 		{
 			"line end",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: len(sl[3]),
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -441,7 +423,7 @@ Akubishinagara`,
 			tt.editor.PutEnter()
 			tt.editor.PutS([]byte{'O'})
 			if got := strings.Join(tt.editor.Line, "\n"); got != tt.want {
-				t.Errorf("Editor.Line() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.Line() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -459,20 +441,19 @@ func TestEditor_PutEnter_After_Right2_Left_Input_Dollar(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   string
 	}{
 		{
 			"middle",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 5,
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 			`Haruninari
 Nosonoso
@@ -496,7 +477,7 @@ Akubishinagara`,
 			tt.editor.PutS([]byte{'K'})
 			tt.editor.PutS([]byte{'o'})
 			if got := strings.Join(tt.editor.Line, "\n"); got != tt.want {
-				t.Errorf("Editor.Line() = %v, want %v", got, tt.want)
+				t.Errorf("select5.Editor.Line() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -513,20 +494,19 @@ func TestEditor_CursorMove_Utf8Modification(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		editor Editor
+		editor select5.Editor
 		want   string
 	}{
 		{
 			"core",
-			Editor{
-				CursorPosition{
+			select5.Editor{
+				select5.CursorPosition{
 					X: 12,
 					Y: 3,
 				},
 				nil,
 				os.Stderr,
 				sl,
-				select5.KeyEvent{},
 			},
 
 			`春になり
@@ -568,7 +548,7 @@ func TestEditor_CursorMove_Utf8Modification(t *testing.T) {
 				for _, b := range tt.editor.Line[3] {
 					report += fmt.Sprintf("%c (%x)\n", b, b)
 				}
-				t.Errorf("Editor.Line() = %v, want %v\n\nreport: %s", got, tt.want, report)
+				t.Errorf("select5.Editor.Line() = %v, want %v\n\nreport: %s", got, tt.want, report)
 			}
 		})
 	}
