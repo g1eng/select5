@@ -16,10 +16,13 @@ For more rich experience (but fat package), use [bubble](https://github.com/char
 select5 offers two primary selection modes:
 - Simple string selection from a list
 - Advanced table row selection with mixed data types
-- Console text editor with Emacs-like key binding
 
 Both modes support keyboard navigation with arrow keys and selection with Enter.
 The library handles terminal control sequences and cursor movement automatically.
+
+
+The package also implements an experimental console text editor with Emacs-like key binding.
+For more detail, see the [example](#text-editor-alpha).
 
 # Basic Utf8Char Selection
 
