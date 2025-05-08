@@ -359,6 +359,42 @@ func TestSelector_Type(t *testing.T) {
 		want   byte
 	}{
 		{
+			name: "simple string list",
+			fields: fields{
+				Data: []any{
+					"a", "ho", "ko", "ra", "s", "i", "c", "k",
+				},
+			},
+			want: select5.IsList | select5.IsString,
+		},
+		{
+			name: "float64 list",
+			fields: fields{
+				Data: []any{
+					1.414, 3.142, 2.718,
+				},
+			},
+			want: select5.IsList | select5.IsFloat64,
+		},
+		{
+			name: "any number list",
+			fields: fields{
+				Data: []any{
+					1, 5, 1, 8, 1.573, 3.1412, 2.718,
+				},
+			},
+			want: select5.IsList | select5.IsAny,
+		},
+		{
+			name: "mixed list",
+			fields: fields{
+				Data: []any{
+					1, 5, "Acknowledged", 8, 1.573, 3.1412, nil,
+				},
+			},
+			want: select5.IsList | select5.IsAny,
+		},
+		{
 			name: "simple string table",
 			fields: fields{
 				Data: [][]any{
@@ -369,7 +405,7 @@ func TestSelector_Type(t *testing.T) {
 			want: select5.IsTable | select5.IsString,
 		},
 		{
-			name: "simple int table",
+			name: "int table",
 			fields: fields{
 				Data: [][]any{
 					{123, 345, 6789},
@@ -379,7 +415,7 @@ func TestSelector_Type(t *testing.T) {
 			want: select5.IsTable | select5.IsInt,
 		},
 		{
-			name: "simple int64 table",
+			name: "int64 table",
 			fields: fields{
 				Data: [][]any{
 					{int64(123), int64(345), int64(678)},
@@ -389,7 +425,7 @@ func TestSelector_Type(t *testing.T) {
 			want: select5.IsTable | select5.IsInt64,
 		},
 		{
-			name: "simple float32 table",
+			name: "float64 table",
 			fields: fields{
 				Data: [][]any{
 					{1.23, 3.45, 6.78},

@@ -26,11 +26,13 @@ const (
 	IsTable   byte = 0x80
 )
 
+// Selector represents a selectable dataset with an optional header
 type Selector struct {
 	Header []string // selection header
 	Data   any
 }
 
+// NewSelectorFrom creates a new Selector from a slice of any type
 func NewSelectorFrom(p []any) *Selector {
 	var a []any
 	for _, s := range p {
@@ -42,6 +44,8 @@ func NewSelectorFrom(p []any) *Selector {
 	}
 }
 
+// Type determines the type of data in the selector
+// Returns a byte value representing the data type(s).
 func (s *Selector) Type() byte {
 
 	var elementType = IsList
@@ -110,6 +114,8 @@ func RenderMenu(list []string, selectedIndex int, prevIndex int) {
 	}
 }
 
+// Select performs the selection based on the data type.
+// Returns the selected item or an error if selection is not supported
 func (s *Selector) Select() (any, error) {
 	if s.Type()&IsTable == IsTable {
 		return SelectTableRow(s.Data.([][]any))
