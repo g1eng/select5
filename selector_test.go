@@ -51,7 +51,7 @@ func TestSelectString(t *testing.T) {
 	// Send key sequence: DOWN arrow followed by ENTER
 	w.Write([]byte{0x1b, '[', 'B'}) // DOWN arrow
 	time.Sleep(50 * time.Millisecond)
-	w.Write([]byte{13}) // ENTER key
+	w.Write([]byte{0x0a}) // ENTER key
 
 	// Wait for result with timeout
 	select {
@@ -64,7 +64,7 @@ func TestSelectString(t *testing.T) {
 	}
 }
 
-func TestSelectStringWithNoOptions(t *testing.T) {
+func TestSelectStringWithBlankList(t *testing.T) {
 	_, err := select5.SelectString([]string{})
 	if err == nil {
 		t.Fatal("Expected error, got none")
@@ -109,7 +109,7 @@ func TestSelectTableRow(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 	w.Write([]byte{0x1b, '[', 'B'}) // DOWN arrow again
 	time.Sleep(50 * time.Millisecond)
-	w.Write([]byte{13}) // ENTER key
+	w.Write([]byte{0x0a}) // ENTER key
 
 	// Wait for result with timeout
 	select {
@@ -131,6 +131,62 @@ func TestSelectTableRowWithEmptyTable(t *testing.T) {
 	}
 }
 
+func TestSelector_Select_String(t *testing.T) {
+	s := []string{"AGI", "BMI", "CES", "DEI", "ERR"}
+	list := select5.Selector{
+		Header: nil,
+		Data:   s,
+	}
+	// Create a pipe to simulate keyboard input
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	defer w.Close()
+
+	// Save original stdin and replace with our pipe
+	oldStdin := os.Stdin
+	os.Stdin = r
+	defer func() { os.Stdin = oldStdin }() // Restore stdin when test completes
+	resultCh := make(chan any)
+	errCh := make(chan error)
+
+	go func() {
+		res, err := list.Select()
+		if err != nil {
+			errCh <- err
+		}
+		resultCh <- res
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	w.Write([]byte{0x1b, '[', 'B'}) // DOWN arrow
+	time.Sleep(50 * time.Millisecond)
+	w.Write([]byte{0x1b, '[', 'B'}) // DOWN arrow again
+	time.Sleep(50 * time.Millisecond)
+	w.Write([]byte{0x0a}) // ENTER key
+	select {
+	case result := <-resultCh:
+		// Check if we got the correct row (Charlie's data)
+		switch result.(type) {
+		case string:
+			if result.(string) != s[2] {
+				t.Fatalf("Expected '%v', got '%v'", s[2], result.(string))
+			}
+		default:
+			t.Fatalf("Expected result to be a string, got %T", result)
+		}
+	case e := <-errCh:
+		t.Fatalf("Expected error channel to be nil, got %v", e)
+	case <-time.After(3 * time.Second):
+		t.Fatal("Test timed out waiting for selection")
+	}
+}
+
 //func contains(s, substr string) bool {
 //	return bytes.Contains([]byte(s), []byte(substr))
 //}
@@ -145,4 +201,279 @@ func rowsEqual(a, b []any) bool {
 		}
 	}
 	return true
+}
+
+//func TestSelector_Select_MixedList(t *testing.T) {
+//
+//	list := select5.Selector{
+//		Header: nil,
+//		Data:   []any{"AGI", 2, true, 3.58, nil},
+//	}
+//	// Create a pipe to simulate keyboard input
+//	r, w, err := os.Pipe()
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	defer r.Close()
+//	defer w.Close()
+//
+//	// Save original stdin and replace with our pipe
+//	oldStdin := os.Stdin
+//	os.Stdin = r
+//	defer func() { os.Stdin = oldStdin }() // Restore stdin when test completes
+//	resultCh := make(chan any)
+//	errCh := make(chan error)
+//
+//	go func() {
+//		res, err := list.Select()
+//		if err != nil {
+//			errCh <- err
+//		}
+//		resultCh <- res
+//	}()
+//	if err != nil {
+//		t.Fatal(err)
+//	}
+//	time.Sleep(100 * time.Millisecond)
+//
+//	w.Write([]byte{0x1b, '[', 'B'}) // DOWN arrow
+//	time.Sleep(50 * time.Millisecond)
+//	w.Write([]byte{0x1b, '[', 'B'}) // DOWN arrow again
+//	time.Sleep(50 * time.Millisecond)
+//	w.Write([]byte{0x0a}) // ENTER key
+//	select {
+//	case result := <-resultCh:
+//		// Check if we got the correct row (Charlie's data)
+//		switch result.(type) {
+//		case string:
+//			if result.(bool) != list.Data.([]any)[2].(bool) {
+//				t.Fatalf("Expected '%v', got '%v'", list.Data.([]any)[2], result)
+//			}
+//		default:
+//			t.Fatalf("Expected result to be a string, got %T", result)
+//		}
+//	case e := <-errCh:
+//		t.Fatalf("Expected error channel to be nil, got %v", e)
+//	case <-time.After(3 * time.Second):
+//		t.Fatal("Test timed out waiting for selection")
+//	}
+//}
+
+func TestSelector_Select_MixedTable(t *testing.T) {
+
+	strPointed := "WORD"
+	otherStrPointed := "VERB"
+	list := select5.Selector{
+		Header: nil,
+		Data: [][]any{
+			{"AGI", 3, true, 3.58, nil},
+			{"BGM", 2, true, 0.9, nil},
+			{"CGC", 1, false, -93.20, &strPointed},
+			{"DPO", 1829, true, 3.58, &otherStrPointed},
+		},
+	}
+	// Create a pipe to simulate keyboard input
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	defer w.Close()
+
+	// Save original stdin and replace with our pipe
+	oldStdin := os.Stdin
+	os.Stdin = r
+	defer func() { os.Stdin = oldStdin }() // Restore stdin when test completes
+	resultCh := make(chan any)
+	errCh := make(chan error)
+
+	go func() {
+		res, err := list.Select()
+		if err != nil {
+			errCh <- err
+		}
+		resultCh <- res
+	}()
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	w.Write([]byte{0x1b, '[', 'A'}) // DOWN arrow
+	time.Sleep(50 * time.Millisecond)
+	w.Write([]byte{0x1b, '[', 'A'}) // DOWN arrow again
+	time.Sleep(50 * time.Millisecond)
+	w.Write([]byte{0x0a}) // ENTER key
+	select {
+	case result := <-resultCh:
+		// Check if we got the correct row (Charlie's data)
+		switch result.(type) {
+		case []any:
+			switch result.([]any)[0].(type) {
+			case string:
+				for i, _ := range result.([]any) {
+					switch result.([]any)[i].(type) {
+					case string:
+						if result.([]any)[i].(string) != list.Data.([][]any)[2][i].(string) {
+							t.Fatalf("Expected '%v', got '%v'", list.Data.([][]any)[2][i], result)
+						}
+					case int:
+						if result.([]any)[i].(int) != list.Data.([][]any)[2][i].(int) {
+							t.Fatalf("Expected '%v', got '%v'", list.Data.([][]any)[2][i], result)
+						}
+					case float32:
+						if result.([]any)[i].(float32) != list.Data.([][]any)[2][i].(float32) {
+							t.Fatalf("Expected '%v', got '%v'", list.Data.([][]any)[2][i], result)
+						}
+					case bool:
+						if result.([]any)[i].(bool) != list.Data.([][]any)[2][i].(bool) {
+							t.Fatalf("Expected '%v', got '%v'", list.Data.([][]any)[2][i], result)
+						}
+					case *string:
+						if result.([]any)[i].(*string) != list.Data.([][]any)[2][i].(*string) {
+							t.Fatalf("Expected '%v', got '%v'", list.Data.([][]any)[2][i], result)
+						}
+					}
+				}
+			default:
+				t.Fatalf("Expected result to be a string, got %T", result)
+			}
+		default:
+			t.Fatalf("Expected result to be a string, got %T", result)
+		}
+	case e := <-errCh:
+		t.Fatalf("Expected error channel to be nil, got %v", e)
+	case <-time.After(3 * time.Second):
+		t.Fatal("Test timed out waiting for selection")
+	}
+}
+
+func TestSelector_Type(t *testing.T) {
+	type fields struct {
+		Header []string
+		Data   any
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   byte
+	}{
+		{
+			name: "simple string list",
+			fields: fields{
+				Data: []any{
+					"a", "ho", "ko", "ra", "s", "i", "c", "k",
+				},
+			},
+			want: select5.IsList | select5.IsString,
+		},
+		{
+			name: "float64 list",
+			fields: fields{
+				Data: []any{
+					1.414, 3.142, 2.718,
+				},
+			},
+			want: select5.IsList | select5.IsFloat64,
+		},
+		{
+			name: "any number list",
+			fields: fields{
+				Data: []any{
+					1, 5, 1, 8, 1.573, 3.1412, 2.718,
+				},
+			},
+			want: select5.IsList | select5.IsAny,
+		},
+		{
+			name: "mixed list",
+			fields: fields{
+				Data: []any{
+					1, 5, "Acknowledged", 8, 1.573, 3.1412, nil,
+				},
+			},
+			want: select5.IsList | select5.IsAny,
+		},
+		{
+			name: "simple string table",
+			fields: fields{
+				Data: [][]any{
+					{"a", "ho", "ko", "ra"},
+					{"s", "i", "c", "k"},
+				},
+			},
+			want: select5.IsTable | select5.IsString,
+		},
+		{
+			name: "int table",
+			fields: fields{
+				Data: [][]any{
+					{123, 345, 6789},
+					{101, 1, 110},
+				},
+			},
+			want: select5.IsTable | select5.IsInt,
+		},
+		{
+			name: "int64 table",
+			fields: fields{
+				Data: [][]any{
+					{int64(123), int64(345), int64(678)},
+					{int64(101), int64(1), int64(123)},
+				},
+			},
+			want: select5.IsTable | select5.IsInt64,
+		},
+		{
+			name: "float64 table",
+			fields: fields{
+				Data: [][]any{
+					{1.23, 3.45, 6.78},
+					{1.01, 0.01, 1.10},
+				},
+			},
+			want: select5.IsTable | select5.IsFloat64,
+		},
+		{
+			name: "mixed number table",
+			fields: fields{
+				Data: [][]any{
+					{1.23, 3.45, -6.7890000190},
+					{1, 0.00001, 0.00000},
+				},
+			},
+			want: select5.IsTable | select5.IsAny,
+		},
+		{
+			name: "mixed primitives table",
+			fields: fields{
+				Data: [][]any{
+					{1.23, "直木", 35},
+					{true, nil, 0.00000},
+				},
+			},
+			want: select5.IsTable | select5.IsAny,
+		},
+		{
+			name: "struct contained mixed table",
+			fields: fields{
+				Data: [][]any{
+					{struct{}{}, "しゅわ", 3.5},
+					{true, nil, 0.00000},
+				},
+			},
+			want: select5.IsTable | select5.IsAny,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &select5.Selector{
+				Header: tt.fields.Header,
+				Data:   tt.fields.Data,
+			}
+			if got := s.Type(); got != tt.want {
+				t.Errorf("Type() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

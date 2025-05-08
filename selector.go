@@ -4,11 +4,77 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/olekukonko/tablewriter"
+	"golang.org/x/term"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 )
+
+const (
+	IsString byte = 0x01
+	IsInt    byte = 0x02
+	IsInt8   byte = 0x02
+	IsInt16  byte = 0x02
+
+	IsInt32   byte = 0x02
+	IsInt64   byte = 0x04
+	IsFloat32 byte = 0x08
+	IsFloat64 byte = 0x10
+	IsBool    byte = 0x20
+	IsPointer byte = 0x40
+	IsAny     byte = 0x7f
+	IsList    byte = 0x00
+	IsTable   byte = 0x80
+)
+
+// Selector represents a selectable dataset with an optional header
+type Selector struct {
+	Header []string // selection header
+	Data   any
+}
+
+// NewSelectorFrom creates a new Selector from a slice of any type
+func NewSelectorFrom(p []any) *Selector {
+	var a []any
+	for _, s := range p {
+		a = append(a, s)
+	}
+	return &Selector{
+		Header: []string{},
+		Data:   a,
+	}
+}
+
+// Type determines the type of data in the selector
+// Returns a byte value representing the data type(s).
+func (s *Selector) Type() byte {
+
+	var elementType = IsList
+	switch s.Data.(type) {
+	case []string:
+		elementType |= IsString
+	case []any:
+		for _, r := range s.Data.([]any) {
+			elementType |= CheckPrimitive(r)
+		}
+	case [][]any:
+		for i, _ := range s.Data.([][]any) {
+			elementType |= IsTable
+			for j, _ := range s.Data.([][]any)[i] {
+				elementType |= CheckPrimitive(s.Data.([][]any)[i][j])
+				if elementType == IsAny|IsTable {
+					break
+				}
+			}
+		}
+	default:
+		return elementType //non-list
+	}
+	typeMask := IsAny & elementType
+	if typeMask&(typeMask-1) != 0 { // two or more types detected
+		elementType |= IsAny
+	}
+	return elementType
+}
 
 // RenderMenu draws the menu with the current selection (internal use)
 func RenderMenu(list []string, selectedIndex int, prevIndex int) {
@@ -48,6 +114,18 @@ func RenderMenu(list []string, selectedIndex int, prevIndex int) {
 	}
 }
 
+// Select performs the selection based on the data type.
+// Returns the selected item or an error if selection is not supported
+func (s *Selector) Select() (any, error) {
+	if s.Type()&IsTable == IsTable {
+		return SelectTableRow(s.Data.([][]any))
+	} else if s.Type()&IsAny == IsString {
+		return SelectString(s.Data.([]string))
+	} else {
+		return nil, fmt.Errorf("selection not supported for the type %d %T", s.Type(), s.Data)
+	}
+}
+
 // SelectString presents a list of strings for selection and returns the selected string.
 // It displays an interactive cursor that can be moved with arrow keys.
 // Returns the selected string or an error if:
@@ -58,12 +136,23 @@ func SelectString(list []string) (string, error) {
 	if len(list) == 0 {
 		return "", fmt.Errorf("zero length list provided")
 	}
+
+	var oldState *term.State
+	isTerm := term.IsTerminal(int(os.Stdin.Fd()))
+	if isTerm {
+		var err error
+		oldState, err = term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			return "", err
+		}
+		defer term.Restore(int(os.Stdin.Fd()), oldState)
+		defer term.Restore(int(os.Stdout.Fd()), oldState)
+	}
+
 	fmt.Print(ClearScreen)
 	fmt.Print(HideCursor)
 
-	keyEvents := CaptureKeyboardEvents(os.Stdin)
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	keyEvents, sigChan := CaptureKeyboardEvents()
 
 	selectedIndex := 0
 	prevIndex := 0
@@ -79,15 +168,15 @@ func SelectString(list []string) (string, error) {
 				return "", fmt.Errorf("keyboard event channel closed")
 			}
 
-			if key.Special != "" {
+			if key.Special != 0 {
 				switch key.Special {
-				case "UP":
+				case UP:
 					selectedIndex = (selectedIndex - 1 + len(list)) % len(list)
 					RenderMenu(list, selectedIndex, prevIndex)
-				case "DOWN":
+				case DOWN:
 					selectedIndex = (selectedIndex + 1) % len(list)
 					RenderMenu(list, selectedIndex, prevIndex)
-				case "ENTER":
+				case ENTER:
 					// Clear screen and show the selection
 					fmt.Print(ClearScreen)
 					fmt.Print(ResetCursor)
@@ -158,14 +247,23 @@ func SelectTableRow(list [][]any) ([]any, error) {
 	if len(list) == 0 {
 		return nil, fmt.Errorf("zero length list provided")
 	}
+	var oldState *term.State
+	isTerm := term.IsTerminal(int(os.Stdin.Fd()))
+	if isTerm {
+		var err error
+		oldState, err = term.MakeRaw(int(os.Stdin.Fd()))
+		if err != nil {
+			return nil, err
+		}
+		defer term.Restore(int(os.Stdin.Fd()), oldState)
+		defer term.Restore(int(os.Stdout.Fd()), oldState)
+	}
 
 	fmt.Print(ClearScreen)
 	fmt.Print(ResetCursor)
 	fmt.Print(HideCursor)
 
-	keyEvents := CaptureKeyboardEvents(os.Stdin)
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	keyEvents, sigChan := CaptureKeyboardEvents()
 
 	selectedIndex := 0
 
@@ -179,21 +277,21 @@ func SelectTableRow(list [][]any) ([]any, error) {
 				return nil, fmt.Errorf("keyboard event channel closed")
 			}
 
-			if key.Special != "" {
+			if key.Special != 0 {
 				switch key.Special {
-				case "UP":
+				case UP:
 					selectedIndex = (selectedIndex - 1 + len(list)) % len(list)
 					// Clear and reposition cursor before redrawing
 					fmt.Print(ClearScreen)
 					fmt.Print(ResetCursor)
 					RenderTable(list, selectedIndex)
-				case "DOWN":
+				case DOWN:
 					selectedIndex = (selectedIndex + 1) % len(list)
 					// Clear and reposition cursor before redrawing
 					fmt.Print(ClearScreen)
 					fmt.Print(ResetCursor)
 					RenderTable(list, selectedIndex)
-				case "ENTER":
+				case ENTER:
 					// Clear screen and show the selection
 					fmt.Print(ClearScreen)
 					fmt.Print(ResetCursor)
