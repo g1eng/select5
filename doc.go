@@ -1,152 +1,159 @@
 package select5
 
-// Package select5 provides interactive terminal-based selection utilities for Go applications.
-// It allows you to select items from lists and tables using keyboard navigation.
+//Package select5 provides interactive terminal-based selection utilities for Go applications.
+//It allows you to select items from lists and tables using keyboard navigation.
 //
-// The package aims to provide simple and slim interactive layer for CLI written in Go.
+//The package aims to provide simple and slim interactive layer for CLI written in Go.
 //
-// For more rich experience (but fat package), use [bubble](https://github.com/charmbracelet/bubbletea) or other solutions.
+//For more rich experience (but fat package), use [bubble](https://github.com/charmbracelet/bubbletea) or other solutions.
 //
-// # Overview
+//# Overview
 //
-// select5 offers two primary selection modes:
-// - Simple string selection from a list
-// - Advanced table row selection with mixed data types
-// - Console text editor with Emacs-like key binding
+//select5 offers two primary selection modes:
+//- Simple string selection from a list
+//- Advanced table row selection with mixed data types
 //
-// Both modes support keyboard navigation with arrow keys and selection with Enter.
-// The library handles terminal control sequences and cursor movement automatically.
+//Both modes support keyboard navigation with arrow keys and selection with Enter.
+//The library handles terminal control sequences and cursor movement automatically.
 //
-// The package also implements an experimental console text editor with Emacs-like key binding.
-// For more detail, see the [example](#text-editor).
 //
-// # Basic Utf8Char Selection
+//The package also implements an experimental console text editor with Emacs-like key binding.
+//For more detail, see the [example](#text-editor-alpha).
 //
-// Use SelectString to display a simple list of strings for selection:
+//# Basic String Selection
 //
-// 	selected, err := select5.SelectString([]string{"Option A", "Option B", "Option C"})
-// 	if err != nil {
-// 	    log.Fatal(err)
-// 	}
-// 	fmt.Println("You selected:", selected)
+//Use SelectString to display a simple list of strings for selection:
 //
-// # Table Row Selection
+//selected, err := select5.SelectString([]string{"Option A", "Option B", "Option C"})
+//if err != nil {
+//	 log.Fatal(err)
+//}
+//fmt.Println("You selected:", selected)
 //
-// For more complex data, SelectTableRow supports tables with mixed data types (integers, floats, strings, booleans):
+//# Table Row Selection
 //
-// 	data := [][]any{
-// 	    {"a", "Apple Inc.", 178.72, true},
-// 	    {"b", "Broadcom", 376.04, false},
-// 	    {"c", "Cisco", 125.30, true},
-// 	}
+//For more complex data, SelectTableRow supports tables with mixed data types (integers, floats, strings, booleans):
 //
-// 	selectedRow, err := select5.SelectTableRow(data)
-// 	if err != nil {
-// 	    log.Fatal(err)
-// 	}
+//data := [][]any{
+//	{"a", "Apple Inc.", 178.72, true},
+//	{"b", "Broadcom", 376.04, false},
+//	{"c", "Cisco", 125.30, true},
+//}
 //
-// 	// Access selected data
-// 	code := selectedRow[0].(string)
-// 	name := selectedRow[1].(string)
+//selectedRow, err := select5.SelectTableRow(data)
+//if err != nil {
+//	log.Fatal(err)
+//}
 //
-// 	fmt.Printf("Selected: %s - %s\n", code, name)
+//// Access selected data
+//code := selectedRow[0].(string)
+//name := selectedRow[1].(string)
 //
-// # Generic entrypoint for data selector
+//fmt.Printf("Selected: %s - %s\n", code, name)
 //
-// For more flexible implementation, you can use `Selector` struct to declare selectable data which may be list or table of primitives, or any type.
+//# Generic entrypoint for data selector
 //
-//	strPointed := "WORD"
-//	otherStrPointed := "VERB"
-//	list := select5.Selector{
-//		Header: nil,
-//		Data: [][]any{
-//			{"AGI", 3, true, 3.58, nil},
-//			{"BGM", 2, true, 0.9, nil},
-//			{"CGC", 1, false, -93.20, &strPointed},
-//			{"DPO", 1829, true, 3.58, &otherStrPointed},
-//		},
-//	}
-// res, _ := list.Select()
-// fmt.Printf("%v", res)
+//For more flexible implementation, you can use `Dataset` struct to declare selectable data which may be list or table of primitives, or any type.
+//(For backward compatibility, you can use `Selector` as the alias of `Dataset`.)
 //
-// You can apply additional type casting for the interface (a.k.a. `any` type) results.
+//strPointed := "WORD"
+//otherStrPointed := "VERB"
+//list := select5.Dataset{
+//	Header: nil,
+//	Data: [][]any{
+//		{"AGI", 3, true, 3.58, nil},
+//		{"BGM", 2, true, 0.9, nil},
+//		{"CGC", 1, false, -93.20, &strPointed},
+//		{"DPO", 1829, true, 3.58, &otherStrPointed},
+//	},
+//}
+//res, _ := list.Select()
+//fmt.Printf("%v", res)
 //
-// # Type Helpers for primitives
+//You can apply additional type casting for the interface (a.k.a. `any` type) results.
 //
-// The package includes helper functions to safely extract and convert values from the `any` type:
+//# Type Helpers for primitives
 //
-// 	// Extract string value
-// 	code, err := select5.GetS(selectedRow[0])
+//The package includes helper functions to safely extract and convert values from the `any` type:
 //
-// 	// Extract float value
-// 	price, err := select5.GetF(selectedRow[2])
+//// Extract string value
+//code, err := select5.GetS(selectedRow[0])
 //
-// 	// Extract bool value
-// 	active, err := select5.GetB(selectedRow[3])
+//// Extract float value
+//price, err := select5.GetF(selectedRow[2])
 //
-// # Builtin Type Detector for `Selector`
+//// Extract bool value
+//active, err := select5.GetB(selectedRow[3])
 //
-// The `Selector` implements type detector in `Type()`, which returns type information in byte expression.
+//# Builtin Type Detector for `Dataset`
 //
-// t := select5.Selector{
-//    Data:   []any{"a","b","c"},
-// }.Type()
-// // 0x01 == IsList | IsString
+//The `Dataset` implements type detector in `Type()`, which returns type information in byte expression.
+//You can use `IsList()` or `IsTable()` to detect whether the data is a list or a table.
 //
-// The type information is calculated by using following bitmask constants:
+//t := select5.Dataset{
+//   Data:   []any{"a","b","c"},
+//}
+//t.Type()
+//// 0x01 == IsList | IsString
+//t.IsList()
+//// true
+//t.IsTable()
+//// false
 //
-// 	IsString byte = 0x01
-//	IsInt    byte = 0x02
-//	IsInt8   byte = 0x02
-//	IsInt16  byte = 0x02
+//The type information is calculated by using following bitmask constants:
 //
-//	IsInt32   byte = 0x02
-//	IsInt64   byte = 0x04
-//	IsFloat32 byte = 0x08
-//	IsFloat64 byte = 0x10
-//	IsBool    byte = 0x20
-//	IsPointer byte = 0x40
-//	IsAny     byte = 0x7f
-//	IsList    byte = 0x00
-//	IsTable   byte = 0x80
+//IsString byte = 0x01
+//IsInt    byte = 0x02
+//IsInt8   byte = 0x02
+//IsInt16  byte = 0x02
 //
-// For example, a float64 list will return `0x10` and a table of string and int values will return `0xff`.
-// (If one or more types have been detected in the data, the result will be a logical sum by IsAny 0x7f).
-// You can implement type switcher for various data structure, using this mechanism.
+//IsInt32   byte = 0x02
+//IsInt64   byte = 0x04
+//IsFloat32 byte = 0x08
+//IsFloat64 byte = 0x10
+//IsBool    byte = 0x20
+//IsPointer byte = 0x40
+//IsAny     byte = 0x7f
+//IsList    byte = 0x00
+//IsTable   byte = 0x80
 //
-// # Terminal Control
+//For example, `Dataset.Type()` for a float64 list will return `0x10` and a table of string and int values will return `0xff`.
+//(If one or more types have been detected in the data, the result will be a logical sum by IsAny 0x7f).
+//You can implement type switcher for various data structures, using this mechanism.
 //
-// The package provides constants for terminal control operations:
+//# Terminal Control
 //
-// 	// Position cursor
-// 	fmt.Printf(select5.MoveTo, line, column)
+//The package provides constants for terminal control operations:
 //
-// 	// Clear screen
-// 	fmt.Print(select5.ClearScreen)
+//// Position cursor
+//fmt.Printf(select5.MoveTo, line, column)
 //
-// 	// Reset cursor to home position
-// 	fmt.Print(select5.ResetCursor)
+//// Clear screen
+//fmt.Print(select5.ClearScreen)
 //
-// # Keyboard Navigation
+//// Reset cursor to home position
+//fmt.Print(select5.ResetCursor)
 //
-// - Up/Down arrows: Move selection
-// - Enter: Confirm selection
-// - 'q' or Ctrl+C: Quit without selection
+//# Keyboard Navigation for Selectors
 //
-// # Error Handling
+//- Up/Down arrows: Move selection
+//- Enter: Confirm selection
+//- 'q' or Ctrl+C: Quit without selection
 //
-// All selection functions return appropriate errors that should be checked:
-// - Empty lists
-// - Type conversion failures
-// - Keyboard event channel closure
-// - Interrupted selection
+//# Error Handling
 //
-// # Text Editor
+//All selection functions return appropriate errors that should be checked:
+//- Empty lists
+//- Type conversion failures
+//- Keyboard event channel closure
+//- Interrupted selection
 //
-// select5 is not just a selection helper package, but also provides a tiny text editor.
-// You can easily embed the editor in your application:
+//# Text Editor (alpha)
 //
-// import (
+//`select5` is not just a selection helper package, but also provides a tiny text editor.
+//You can easily embed the editor in your application:
+//
+//import (
 //	"fmt"
 //	"github.com/g1eng/select5"
 //	"os"
@@ -175,3 +182,5 @@ package select5
 //	println()
 //	fmt.Printf(select5.ClearScreenFromCursor)
 //}
+//
+//Enjoy it!

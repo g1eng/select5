@@ -59,12 +59,13 @@ fmt.Printf("Selected: %s - %s\n", code, name)
 
 # Generic entrypoint for data selector
 
-For more flexible implementation, you can use `Selector` struct to declare selectable data which may be list or table of primitives, or any type.
+For more flexible implementation, you can use `Dataset` struct to declare selectable data which may be list or table of primitives, or any type.
+(For backward compatibility, you can use `Selector` as the alias of `Dataset`.)
 
 ```go
 strPointed := "WORD"
 otherStrPointed := "VERB"
-list := select5.Selector{
+list := select5.Dataset{
 	Header: nil,
 	Data: [][]any{
 		{"AGI", 3, true, 3.58, nil},
@@ -94,15 +95,21 @@ price, err := select5.GetF(selectedRow[2])
 active, err := select5.GetB(selectedRow[3])
 ```
 
-# Builtin Type Detector for `Selector`
+# Builtin Type Detector for `Dataset`
 
-The `Selector` implements type detector in `Type()`, which returns type information in byte expression.
+The `Dataset` implements type detector in `Type()`, which returns type information in byte expression.
+You can use `IsList()` or `IsTable()` to detect whether the data is a list or a table.
 
 ```go
-t := select5.Selector{
+t := select5.Dataset{
    Data:   []any{"a","b","c"},
-}.Type()
+}
+t.Type()
 // 0x01 == IsList | IsString
+t.IsList()
+// true
+t.IsTable()
+// false
 ```
 
 The type information is calculated by using following bitmask constants:
@@ -124,7 +131,7 @@ IsList    byte = 0x00
 IsTable   byte = 0x80
 ```
 
-For example, a float64 list will return `0x10` and a table of string and int values will return `0xff`.
+For example, `Dataset.Type()` for a float64 list will return `0x10` and a table of string and int values will return `0xff`.
 (If one or more types have been detected in the data, the result will be a logical sum by IsAny 0x7f).
 You can implement type switcher for various data structures, using this mechanism.
 

@@ -26,41 +26,49 @@ const (
 	IsTable   byte = 0x80
 )
 
-// Selector represents a selectable dataset with an optional header
-type Selector struct {
+// Selector is the alias of Dataset (for backword compatibility)
+type Selector Dataset
+
+// Dataset represents a selectable dataset with an optional header
+type Dataset struct {
 	Header []string // selection header
 	Data   any
 }
 
-// NewSelectorFrom creates a new Selector from a slice of any type
-func NewSelectorFrom(p []any) *Selector {
+// NewDatasetFrom creates a new Dataset from a slice of any type
+func NewDatasetFrom(p []any) *Dataset {
 	var a []any
 	for _, s := range p {
 		a = append(a, s)
 	}
-	return &Selector{
+	return &Dataset{
 		Header: []string{},
 		Data:   a,
 	}
 }
 
+// NewSelectorFrom is the alias of NewDatasetFrom
+func NewSelectorFrom(p []any) *Dataset {
+	return NewDatasetFrom(p)
+}
+
 // Type determines the type of data in the selector
 // Returns a byte value representing the data type(s).
-func (s *Selector) Type() byte {
+func (d *Dataset) Type() byte {
 
 	var elementType = IsList
-	switch s.Data.(type) {
+	switch d.Data.(type) {
 	case []string:
 		elementType |= IsString
 	case []any:
-		for _, r := range s.Data.([]any) {
+		for _, r := range d.Data.([]any) {
 			elementType |= CheckPrimitive(r)
 		}
 	case [][]any:
-		for i, _ := range s.Data.([][]any) {
+		for i, _ := range d.Data.([][]any) {
 			elementType |= IsTable
-			for j, _ := range s.Data.([][]any)[i] {
-				elementType |= CheckPrimitive(s.Data.([][]any)[i][j])
+			for j, _ := range d.Data.([][]any)[i] {
+				elementType |= CheckPrimitive(d.Data.([][]any)[i][j])
 				if elementType == IsAny|IsTable {
 					break
 				}
@@ -76,6 +84,44 @@ func (s *Selector) Type() byte {
 	return elementType
 }
 
+// IsList presents whether the dataset is a simple list, not a two-dimensional data
+func (d *Dataset) IsList() bool {
+	return d.Type()&IsTable == 0
+}
+
+// IsTable presents whether the dataset is a two-dimensional data or not
+func (d *Dataset) IsTable() bool {
+	return d.Type()&IsTable != 0
+}
+
+// TypeList presents the list of byte representations of the list.
+func (d *Dataset) TypeList() ([]byte, error) {
+	var res []byte
+	if d.IsTable() {
+		return nil, fmt.Errorf("dataset is not a list, but a table")
+	}
+	for _, a := range d.Data.([]any) {
+		res = append(res, CheckPrimitive(a))
+	}
+	return res, nil
+}
+
+// TypeTable presents the table of byte representations of the data.
+func (d *Dataset) TypeTable() ([][]byte, error) {
+	var res [][]byte
+	if d.IsList() {
+		return nil, fmt.Errorf("dataset is not a list, but a table")
+	}
+	for _, ao := range d.Data.([][]any) {
+		var b []byte
+		for _, a := range ao {
+			b = append(b, CheckPrimitive(a))
+		}
+		res = append(res, b)
+	}
+	return res, nil
+}
+
 // RenderMenu draws the menu with the current selection (internal use)
 func RenderMenu(list []string, selectedIndex int, prevIndex int) {
 
@@ -84,12 +130,12 @@ func RenderMenu(list []string, selectedIndex int, prevIndex int) {
 	if selectedIndex == prevIndex && selectedIndex == 0 {
 		for i, item := range list {
 			if i == 0 {
-				fmt.Printf("\033[%d;1H", i+1)
+				fmt.Printf(MoveTo, i+1, 1)
 				fmt.Print(ClearLine)
 				fmt.Print("> ")
 				fmt.Print(item)
 			} else {
-				fmt.Printf("\033[%d;1H", i+1)
+				fmt.Printf(MoveTo, i+1, 1)
 				fmt.Print(ClearLine)
 				fmt.Print("  ")
 				fmt.Print(item)
@@ -100,13 +146,13 @@ func RenderMenu(list []string, selectedIndex int, prevIndex int) {
 
 	for i, item := range list {
 		if i == prevIndex {
-			fmt.Printf("\033[%d;1H", i+1)
+			fmt.Printf(MoveTo, i+1, 1)
 			fmt.Print(ClearLine)
 			fmt.Print("  ")
 			fmt.Print(item)
 		}
 		if i == selectedIndex {
-			fmt.Printf("\033[%d;1H", i+1)
+			fmt.Printf(MoveTo, i+1, 1)
 			fmt.Print(ClearLine)
 			fmt.Print("> ")
 			fmt.Print(item)
@@ -116,13 +162,13 @@ func RenderMenu(list []string, selectedIndex int, prevIndex int) {
 
 // Select performs the selection based on the data type.
 // Returns the selected item or an error if selection is not supported
-func (s *Selector) Select() (any, error) {
-	if s.Type()&IsTable == IsTable {
-		return SelectTableRow(s.Data.([][]any))
-	} else if s.Type()&IsAny == IsString {
-		return SelectString(s.Data.([]string))
+func (d *Dataset) Select() (any, error) {
+	if d.Type()&IsTable == IsTable {
+		return SelectTableRow(d.Data.([][]any))
+	} else if d.Type()&IsAny == IsString {
+		return SelectString(d.Data.([]string))
 	} else {
-		return nil, fmt.Errorf("selection not supported for the type %d %T", s.Type(), s.Data)
+		return nil, fmt.Errorf("selection not supported for the type %d %T", d.Type(), d.Data)
 	}
 }
 
@@ -151,6 +197,7 @@ func SelectString(list []string) (string, error) {
 
 	fmt.Print(ClearScreen)
 	fmt.Print(HideCursor)
+	defer fmt.Print(ShowCursor)
 
 	keyEvents, sigChan := CaptureKeyboardEvents()
 
@@ -192,7 +239,7 @@ func SelectString(list []string) (string, error) {
 			}
 
 		case <-sigChan:
-			fmt.Printf("\033[%d;1H", len(list)+1)
+			fmt.Printf(MoveTo, len(list)+1, 1)
 			return "", nil
 		}
 	}

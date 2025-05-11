@@ -27,6 +27,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	if s == nil {
+		fmt.Println("quit")
+		return
+	}
 	w, err := select5.GetV(s[0])
 	if err != nil {
 		panic(err)

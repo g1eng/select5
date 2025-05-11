@@ -133,7 +133,7 @@ func TestSelectTableRowWithEmptyTable(t *testing.T) {
 
 func TestSelector_Select_String(t *testing.T) {
 	s := []string{"AGI", "BMI", "CES", "DEI", "ERR"}
-	list := select5.Selector{
+	list := select5.Dataset{
 		Header: nil,
 		Data:   s,
 	}
@@ -205,9 +205,9 @@ func rowsEqual(a, b []any) bool {
 
 //func TestSelector_Select_MixedList(t *testing.T) {
 //
-//	list := select5.Selector{
+//	list := select5.Dataset{
 //		Header: nil,
-//		Data:   []any{"AGI", 2, true, 3.58, nil},
+//		Dataset:   []any{"AGI", 2, true, 3.58, nil},
 //	}
 //	// Create a pipe to simulate keyboard input
 //	r, w, err := os.Pipe()
@@ -246,8 +246,8 @@ func rowsEqual(a, b []any) bool {
 //		// Check if we got the correct row (Charlie's data)
 //		switch result.(type) {
 //		case string:
-//			if result.(bool) != list.Data.([]any)[2].(bool) {
-//				t.Fatalf("Expected '%v', got '%v'", list.Data.([]any)[2], result)
+//			if result.(bool) != list.Dataset.([]any)[2].(bool) {
+//				t.Fatalf("Expected '%v', got '%v'", list.Dataset.([]any)[2], result)
 //			}
 //		default:
 //			t.Fatalf("Expected result to be a string, got %T", result)
@@ -263,7 +263,7 @@ func TestSelector_Select_MixedTable(t *testing.T) {
 
 	strPointed := "WORD"
 	otherStrPointed := "VERB"
-	list := select5.Selector{
+	list := select5.Dataset{
 		Header: nil,
 		Data: [][]any{
 			{"AGI", 3, true, 3.58, nil},
@@ -467,12 +467,217 @@ func TestSelector_Type(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := &select5.Selector{
+			s := &select5.Dataset{
 				Header: tt.fields.Header,
 				Data:   tt.fields.Data,
 			}
 			if got := s.Type(); got != tt.want {
 				t.Errorf("Type() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSelector_IsList_IsTable(t *testing.T) {
+	type fields struct {
+		Data any
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "simple string list",
+			fields: fields{
+				Data: []any{
+					"a", "ho", "ko", "ra", "s", "i", "c", "k",
+				},
+			},
+			want: true,
+		},
+		{
+			name: "mixed list",
+			fields: fields{
+				Data: []any{
+					1, 5, "Acknowledged", 8, 1.573, 3.1412, nil,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "float64 table",
+			fields: fields{
+				Data: [][]any{
+					{1.23, 3.45, 6.78},
+					{1.01, 0.01, 1.10},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "mixed primitives table",
+			fields: fields{
+				Data: [][]any{
+					{1.23, "直木", 35},
+					{true, nil, 0.00000},
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &select5.Dataset{
+				Data: tt.fields.Data,
+			}
+			if got := s.IsList(); got != tt.want {
+				t.Errorf("IsList() = %v, want %v", got, tt.want)
+			}
+			if got := !s.IsTable(); got != tt.want {
+				t.Errorf("IsTable() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSelector_TypeList(t *testing.T) {
+	type fields struct {
+		Data any
+	}
+	tests := []struct {
+		name      string
+		fields    fields
+		want      []byte
+		wantError bool
+	}{
+		{
+			name: "simple string list",
+			fields: fields{
+				Data: []any{
+					"a", "ho", "ko", "ra", "s", "i", "c", "k",
+				},
+			},
+			want: []byte{select5.IsString, select5.IsString, select5.IsString, select5.IsString, select5.IsString, select5.IsString, select5.IsString, select5.IsString},
+		},
+		{
+			name: "mixed list",
+			fields: fields{
+				Data: []any{
+					1, 5, "Acknowledged", 8, 1.573, 3.1412, nil,
+				},
+			},
+			want: []byte{select5.IsInt, select5.IsInt, select5.IsString, select5.IsInt, select5.IsFloat64, select5.IsFloat64, select5.IsAny},
+		},
+		{
+			name: "float64 table",
+			fields: fields{
+				Data: [][]any{
+					{1.23, 3.45, 6.78},
+					{1.01, 0.01, 1.10},
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "mixed primitives table",
+			fields: fields{
+				Data: [][]any{
+					{1.23, "直木", 35},
+					{true, nil, 0.00000},
+				},
+			},
+			wantError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &select5.Dataset{
+				Data: tt.fields.Data,
+			}
+			res, err := s.TypeList()
+			if tt.wantError && err == nil {
+				t.Errorf("TypeList() error = %v, wantErr %v", err, tt.wantError)
+			}
+			for i, got := range res {
+				if got != tt.want[i] {
+					t.Errorf("IsList() = %v, want %v", got, tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestSelector_TypeTable(t *testing.T) {
+	type fields struct {
+		Data any
+	}
+	tests := []struct {
+		name      string
+		fields    fields
+		want      [][]byte
+		wantError bool
+	}{
+		{
+			name: "simple string list",
+			fields: fields{
+				Data: []any{
+					"a", "ho", "ko", "ra", "s", "i", "c", "k",
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "mixed list",
+			fields: fields{
+				Data: []any{
+					1, 5, "Acknowledged", 8, 1.573, 3.1412, nil,
+				},
+			},
+			wantError: true,
+		},
+		{
+			name: "float64 table",
+			fields: fields{
+				Data: [][]any{
+					{1.23, 3.45, 6.78},
+					{1.01, 0.01, 1.10},
+				},
+			},
+			want: [][]byte{
+				{select5.IsFloat64, select5.IsFloat64, select5.IsFloat64},
+				{select5.IsFloat64, select5.IsFloat64, select5.IsFloat64},
+			},
+		},
+		{
+			name: "mixed primitives table",
+			fields: fields{
+				Data: [][]any{
+					{1.23, "直木", 35},
+					{true, nil, 0.00000},
+				},
+			},
+			want: [][]byte{
+				{select5.IsFloat64, select5.IsString, select5.IsInt},
+				{select5.IsBool, select5.IsAny, select5.IsFloat64},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &select5.Dataset{
+				Data: tt.fields.Data,
+			}
+			res, err := s.TypeTable()
+			if tt.wantError && err == nil {
+				t.Errorf("TypeList() error = %v, wantErr %v", err, tt.wantError)
+			}
+			for i, gotOut := range res {
+				for j, got := range gotOut {
+					if got != tt.want[i][j] {
+						t.Errorf("IsList() = %v, want %v", got, tt.want[i][j])
+					}
+				}
 			}
 		})
 	}
